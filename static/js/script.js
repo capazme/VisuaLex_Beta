@@ -71,26 +71,14 @@ document.getElementById('scrape-form').addEventListener('submit', async function
             document.getElementById('brocardi-info-container').style.display = 'none';
         }
 
+        // Aggiorna la cronologia dopo una nuova ricerca
+        updateHistory();
+
         setLoading(false);
     } catch (error) {
         setLoading(false);
         handleError(error, document.getElementById('result'));
     }
-});
-
-// Aggiungiamo il listener per il pulsante reset
-document.getElementById('reset-button').addEventListener('click', function() {
-    document.getElementById('scrape-form').reset();
-    document.getElementById('norma-data').innerHTML = '';
-    document.getElementById('result').innerHTML = '';
-    document.getElementById('brocardi-info-container').style.display = 'none';
-    document.getElementById('brocardi-info').innerHTML = '';
-    document.getElementById('pdf-frame').style.display = 'none';
-    document.getElementById('download-pdf').style.display = 'none';
-    document.getElementById('fullscreen-button').style.display = 'none';
-    document.querySelector('.collapsible').style.display = 'none';
-    document.querySelector('.content').style.display = 'none';
-    setLoading(false); // Assicurati che il caricamento sia nascosto
 });
 
 // Funzione per visualizzare i dati della norma
@@ -111,6 +99,7 @@ function displayNormaData(normaData, resultText) {
     const resultContainer = document.getElementById('result');
     resultContainer.textContent = resultText;
 }
+
 
 // Funzione per visualizzare le informazioni di Brocardi
 function displayBrocardiInfo(info) {
@@ -176,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupPdfButton(elements.viewPdfButton, elements.pdfFrame, elements.downloadPdfButton, elements.fullscreenButton, elements.collapsibleButton, elements.collapsibleContent);
 
     elements.collapsibleButton.addEventListener('click', toggleCollapsibleContent);
+
     updateHistory();
 });
 
@@ -336,6 +326,7 @@ function toggleCollapsibleContent() {
     content.style.display = content.style.display === 'block' ? 'none' : 'block';
 }
 
+
 /*******************************
  * FUNZIONI DI SUPPORTO
  *******************************/
@@ -399,3 +390,69 @@ function updateHistory() {
             console.error('Errore nel recupero della cronologia:', error);
         });
 }
+
+function updateHistory() {
+    console.log('Updating history');
+    fetch('/history')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok.');
+            }
+            return response.json();
+        })
+        .then(history => {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+
+            history.forEach(entry => {
+                const listItem = document.createElement('li');
+                listItem.classList.add('history-item');
+                listItem.innerHTML = `
+                    <div>
+                        <strong>${entry.tipo_atto}</strong>: ${entry.data}, n. ${entry.numero_atto}, art. ${entry.numero_articolo}
+                        <br>
+                        <a href="${entry.url}" target="_blank">Link</a>
+                        <br>
+                        <small>Timestamp: ${entry.timestamp}</small>
+                    </div>
+                    <button class="delete-history-item" data-timestamp="${entry.timestamp}">Elimina</button>
+                `;
+                historyList.appendChild(listItem);
+            });
+
+            // Aggiungi listener per i pulsanti di eliminazione
+            document.querySelectorAll('.delete-history-item').forEach(button => {
+                button.addEventListener('click', function() {
+                    const timestamp = this.getAttribute('data-timestamp');
+                    deleteHistoryItem(timestamp);
+                });
+            });
+
+            console.log('History updated:', history);
+        })
+        .catch(error => {
+            console.error('Errore nel recupero della cronologia:', error);
+        });
+}
+
+function deleteHistoryItem(timestamp) {
+    fetch('/delete_history_item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timestamp: timestamp })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            console.log('History item deleted');
+            updateHistory();
+        } else {
+            console.error('Error deleting history item:', result.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error in deleteHistoryItem:', error);
+    });
+}
+
+

@@ -142,6 +142,32 @@ def get_history():
         logging.error(f"Error in get_history: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+@app.route('/delete_history_item', methods=['POST'])
+def delete_history_item():
+    """
+    Endpoint to delete an item from the history.
+    Expected JSON input:
+    {
+        "timestamp": "timestamp of the item to be deleted"
+    }
+    Returns:
+    {
+        "success": True/False
+    }
+    """
+    try:
+        data = request.get_json()
+        timestamp = data['timestamp']
+        logging.info(f"Received request to delete history item with timestamp: {timestamp}")
+
+        global history
+        history = [item for item in history if item.timestamp != timestamp]
+        return jsonify({'success': True})
+    except Exception as e:
+        logging.error(f"Error in delete_history_item: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)})
+
+
 @app.route('/download/<filename>')
 def downloaded_file(filename):
     return send_from_directory('download', filename)
