@@ -78,6 +78,21 @@ document.getElementById('scrape-form').addEventListener('submit', async function
     }
 });
 
+// Aggiungiamo il listener per il pulsante reset
+document.getElementById('reset-button').addEventListener('click', function() {
+    document.getElementById('scrape-form').reset();
+    document.getElementById('norma-data').innerHTML = '';
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('brocardi-info-container').style.display = 'none';
+    document.getElementById('brocardi-info').innerHTML = '';
+    document.getElementById('pdf-frame').style.display = 'none';
+    document.getElementById('download-pdf').style.display = 'none';
+    document.getElementById('fullscreen-button').style.display = 'none';
+    document.querySelector('.collapsible').style.display = 'none';
+    document.querySelector('.content').style.display = 'none';
+    setLoading(false); // Assicurati che il caricamento sia nascosto
+});
+
 // Funzione per visualizzare i dati della norma
 function displayNormaData(normaData, resultText) {
     console.log('Displaying norma data:', normaData);
@@ -320,7 +335,6 @@ function toggleCollapsibleContent() {
     const content = this.nextElementSibling;
     content.style.display = content.style.display === 'block' ? 'none' : 'block';
 }
-
 
 /*******************************
  * FUNZIONI DI SUPPORTO
