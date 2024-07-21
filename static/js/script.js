@@ -81,6 +81,21 @@ document.getElementById('scrape-form').addEventListener('submit', async function
     }
 });
 
+// Funzione per resettare il form e pulire i campi
+document.getElementById('reset-button').addEventListener('click', function() {
+    document.getElementById('scrape-form').reset();
+    document.getElementById('norma-data').innerHTML = '';
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('brocardi-info-container').style.display = 'none';
+    document.getElementById('brocardi-info').innerHTML = '';
+    document.getElementById('pdf-frame').style.display = 'none';
+    document.getElementById('download-pdf').style.display = 'none';
+    document.getElementById('fullscreen-button').style.display = 'none';
+    document.querySelector('.collapsible').style.display = 'none';
+    document.querySelector('.content').style.display = 'none';
+    setLoading(false); // Assicurati che il caricamento sia nascosto
+});
+
 // Funzione per visualizzare i dati della norma
 function displayNormaData(normaData, resultText) {
     console.log('Displaying norma data:', normaData);
@@ -99,7 +114,6 @@ function displayNormaData(normaData, resultText) {
     const resultContainer = document.getElementById('result');
     resultContainer.textContent = resultText;
 }
-
 
 // Funzione per visualizzare le informazioni di Brocardi
 function displayBrocardiInfo(info) {
@@ -166,6 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     elements.collapsibleButton.addEventListener('click', toggleCollapsibleContent);
 
+    // Aggiornamento cronologia
     updateHistory();
 });
 
@@ -326,7 +341,6 @@ function toggleCollapsibleContent() {
     content.style.display = content.style.display === 'block' ? 'none' : 'block';
 }
 
-
 /*******************************
  * FUNZIONI DI SUPPORTO
  *******************************/
@@ -375,49 +389,30 @@ function updateHistory() {
 
             history.forEach(entry => {
                 const listItem = document.createElement('li');
-                listItem.innerHTML = `
-                    <strong>${entry.tipo_atto}</strong>: ${entry.data}, n. ${entry.numero_atto}, art. ${entry.numero_articolo} 
-                    <br>
-                    <a href="${entry.url}" target="_blank">Link</a>
-                    <br>
-                    <small>Timestamp: ${entry.timestamp}</small>
-                `;
-                historyList.appendChild(listItem);
-            });
-            console.log('History updated:', history);
-        })
-        .catch(error => {
-            console.error('Errore nel recupero della cronologia:', error);
-        });
-}
-
-function updateHistory() {
-    console.log('Updating history');
-    fetch('/history')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok.');
-            }
-            return response.json();
-        })
-        .then(history => {
-            const historyList = document.getElementById('history-list');
-            historyList.innerHTML = '';
-
-            history.forEach(entry => {
-                const listItem = document.createElement('li');
                 listItem.classList.add('history-item');
+                const numeroAtto = entry.numero_atto ? `n. ${entry.numero_atto}` : '';
+                const dataVersione = entry.data_versione ? `al ${entry.data_versione}` : '';
+                
                 listItem.innerHTML = `
                     <div>
-                        <strong>${entry.tipo_atto}</strong>: ${entry.data}, n. ${entry.numero_atto}, art. ${entry.numero_articolo}
+                        <strong>${entry.tipo_atto}</strong> ${entry.data} ${numeroAtto}, art. ${entry.numero_articolo}, ${entry.versione} ${dataVersione}
                         <br>
-                        <a href="${entry.url}" target="_blank">Link</a>
+                        <a href="${entry.urn}" target="_blank">Link</a>
                         <br>
                         <small>Timestamp: ${entry.timestamp}</small>
                     </div>
+                    <button class="view-history-item" data-urn="${entry.urn}">Visualizza</button>
                     <button class="delete-history-item" data-timestamp="${entry.timestamp}">Elimina</button>
                 `;
                 historyList.appendChild(listItem);
+            });
+
+            // Aggiungi listener per i pulsanti di visualizzazione
+            document.querySelectorAll('.view-history-item').forEach(button => {
+                button.addEventListener('click', function() {
+                    const urn = this.getAttribute('data-urn');
+                    viewHistoryItem(urn);
+                });
             });
 
             // Aggiungi listener per i pulsanti di eliminazione
@@ -435,6 +430,55 @@ function updateHistory() {
         });
 }
 
+// Funzione per visualizzare i dati di un elemento della cronologia
+function viewHistoryItem(urn) {
+    setLoading(true);
+
+    // Estrazione dell'articolo
+    fetch('/extract_article', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urn: urn, article: '1' }) // Assumi che l'articolo sia '1' per semplicità
+    })
+    .then(response => response.json())
+    .then(articleResult => {
+        if (articleResult.error) {
+            handleError(articleResult.error, document.getElementById('result'));
+            setLoading(false);
+            return;
+        }
+        document.getElementById('result').textContent = articleResult.result;
+
+        // Recupero delle informazioni di Brocardi
+        return fetch('/brocardi_info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urn: urn })
+        });
+    })
+    .then(response => response.json())
+    .then(brocardiResult => {
+        if (brocardiResult.error) {
+            handleError(brocardiResult.error, document.getElementById('result'));
+            setLoading(false);
+            return;
+        }
+        if (brocardiResult.brocardi_info) {
+            displayBrocardiInfo(brocardiResult.brocardi_info);
+            document.getElementById('brocardi-info-container').style.display = 'block';
+        } else {
+            document.getElementById('brocardi-info-container').style.display = 'none';
+        }
+
+        setLoading(false);
+    })
+    .catch(error => {
+        setLoading(false);
+        handleError(error, document.getElementById('result'));
+    });
+}
+
+// Funzione per eliminare un elemento della cronologia
 function deleteHistoryItem(timestamp) {
     fetch('/delete_history_item', {
         method: 'POST',
@@ -454,5 +498,3 @@ function deleteHistoryItem(timestamp) {
         console.error('Error in deleteHistoryItem:', error);
     });
 }
-
-

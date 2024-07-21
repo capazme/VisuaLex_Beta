@@ -86,7 +86,8 @@ def extract_html_article(norma_visitata):
     Returns:
     str -- The extracted article text or None if not found
     """
-    urn = norma_visitata.get_urn()
+    urn = norma_visitata.urn
+    
     logging.info(f"Fetching HTML content from URN: {urn}")
     try:
         response = requests.get(urn)

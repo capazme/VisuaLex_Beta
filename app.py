@@ -32,6 +32,33 @@ def convert_to_hashable(data):
     """
     return tuple(sorted(data.items()))
 
+@app.route('/fetch_norm_from_urn', methods=['POST'])
+def fetch_norm_from_urn():
+    try:
+        data = request.get_json()
+        urn = data['urn']
+        tipo_atto = data['act_type']
+        logging.info(f"Fetching data for URN: {urn} {tipo_atto}")
+
+        # Estrai i dettagli della norma utilizzando l'URN
+        norma = Norma(tipo_atto=tipo_atto, url=urn)  # Popola i campi appropriati di Norma
+        normavisitata = NormaVisitata(
+            norma=norma,
+            numero_articolo=data['article'],  # Popola questo campo come necessario
+            urn=urn
+        )
+        norma_data = normavisitata.to_dict()
+        tree = normavisitata.tree
+
+        return jsonify({
+            'norma_data': norma_data,
+            'tree': tree,
+            'urn': normavisitata.get_urn()
+        })
+    except Exception as e:
+        logging.error(f"Error in fetch_norm_from_urn: {e}", exc_info=True)
+        return jsonify({'error': str(e)})
+
 @cached(norma_cache, key=convert_to_hashable)
 def create_norma_instance(data):
     act_type = data['act_type']
@@ -39,7 +66,7 @@ def create_norma_instance(data):
     act_number = data['act_number']
     article = data['article']
     version = data['version']
-    version_date = data.get('version_date')  # Optional field
+    version_date = data.get('version_date')  
 
     normavisitata = NormaVisitata(
         norma=Norma(tipo_atto=act_type, data=date, numero_atto=act_number),
@@ -91,9 +118,10 @@ def extract_article():
 
         urn = data['urn']
         article = data['article']
+        act_type = data['act_type']
 
         # Recupera l'istanza di Norma utilizzando l'URN
-        norma = Norma(tipo_atto="costituzione", url=urn)  # Popola i campi appropriati di Norma
+        norma = Norma(tipo_atto=act_type, url=urn)  # Popola i campi appropriati di Norma
 
         norma_art_text = extract_article_text(norma, article)
         return jsonify({'result': norma_art_text})
@@ -121,6 +149,8 @@ def brocardi_info():
         urn = data['urn']
         position, brocardi_info, brocardi_link = get_brocardi_information(urn)
         
+        logging.info(f"Received data for brocardi_info: {position}, {brocardi_info}, {brocardi_info}")
+
         return jsonify({
             'brocardi_info': {
                 'position': position,

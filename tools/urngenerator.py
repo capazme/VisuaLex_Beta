@@ -158,3 +158,29 @@ def urn_to_filename(urn):
     logging.info(f"Generated filename: {filename}")
     return filename
 
+@lru_cache(maxsize=MAX_CACHE_SIZE)
+def urn_to_act_type(urn):
+    """
+    Converts a URN to a filename.
+    Arguments:
+    urn -- The URN string
+
+    Returns:
+    filename -- The generated filename
+    """
+    logging.info(f"Starting urn_to_filename with URN: {urn}")
+    
+    # Estrarre la parte dell'URN tra 'stato:' e '~'
+    try:
+        act_type_section = urn.split('stato:')[1].split('~')[0]
+    except IndexError:
+        raise ValueError("Invalid URN format")
+    
+    # Gestire il caso in cui `act_type_section` contenga data e numero
+    if ':' in act_type_section and ';' in act_type_section:
+        type_and_date, number = act_type_section.split(';')
+        act_type, date = type_and_date.split(':')
+        logging.info(f"Found act_type: {act_type}")
+        return act_type
+    else:
+        raise ValueError("Invalid URN format")

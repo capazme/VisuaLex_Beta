@@ -107,6 +107,7 @@ class NormaVisitata(Norma):
         base_dict = super().to_dict()
         base_dict.update({
             'numero_articolo': self.numero_articolo,
+            'urn': self.urn,
             'versione': self.versione,
             'data_versione': self.data_versione,
             'timestamp': self.timestamp
